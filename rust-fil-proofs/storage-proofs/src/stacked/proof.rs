@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use log::{info, trace};
-use merkletree::merkle::FromIndexedParallelIterator;
+use merkletree::merkle::{FromIndexedParallelIterator};
+
 use merkletree::store::{DiskStore, StoreConfig};
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
@@ -31,6 +32,7 @@ use crate::stacked::{
 use crate::util::{data_at_node_offset, NODE_SIZE};
 
 pub const TOTAL_PARENTS: usize = 37;
+pub const N: usize = 10;
 
 #[derive(Debug)]
 pub struct StackedDrg<'a, H: 'a + Hasher, G: 'a + Hasher> {
@@ -91,10 +93,10 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
             let mut parents = vec![0; graph.expansion_degree()];
             graph.expanded_parents(x, &mut parents);
 
-            let pColumn = parents.iter().map(|parent| t_aux.column(*parent)).collect();
+            let p_column = parents.iter().map(|parent| t_aux.column(*parent)).collect();
             //println!("exp parent Column of index:  {} =  {:?}",x, pColumn);
 
-            pColumn
+            p_column
         };
       
         (0..partition_count)
@@ -102,7 +104,7 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
                 println!("proving partition {}/{}", k + 1, partition_count);
 
                 // Derive the set of challenges we are proving over.
-                let challenges = pub_inputs.challenges(layer_challenges, graph_size, Some(k));
+                let challenges =  pub_inputs.challenges(layer_challenges, graph_size, Some(k));
                 println!("Derived challenges  = {:?}", challenges);
                 // Stacked commitment specifics
                 challenges
@@ -210,13 +212,13 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
                                 challenge as u64,
                                 parents_data_full.clone(),
                             );
-                            println!("LabelingProof proof  = {:?}", proof);
+                            //println!("LabelingProof proof  = {:?}", proof);
                             {
                                 let labeled_node = rpc.c_x.get_node_at_layer(layer)?;
                                 println!();
                                 println!("rpc.c_x  = {:?}", rpc.c_x);
                                 println!("layer  = {:?}", layer);
-                                println!("labeled_node   = {:?}", labeled_node);
+                                //println!("labeled_node   = {:?}", labeled_node);
 
                                 assert!(
                                     proof.verify(&pub_inputs.replica_id, &labeled_node),
@@ -232,7 +234,7 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
                                     Some(EncodingProof::new(challenge as u64, parents_data_full));
                             }
 
-                            std::thread::sleep_ms(1000);
+                            std::thread::sleep(std::time::Duration::from_millis(200));
                         }
 
                         let proof = Proof {
@@ -376,6 +378,122 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
             },
         ))
     }
+
+    #[allow(clippy::type_complexity)]
+    fn generate_labels_ars(
+        graph: &StackedBucketGraph<H>,
+        layer_challenges: &LayerChallenges,
+        replica_id: &<H as Hasher>::Domain,
+        config: StoreConfig,
+    ) -> Result<(LabelsCache<H>, Labels<H>)> {
+        println!("generate labels in ars...");
+        let layers = layer_challenges.layers();
+        println!("layers = {:?}", layers);
+        // For now, we require it due to changes in encodings structure.
+        let mut labels: Vec<DiskStore<H::Domain>> = Vec::with_capacity(layers);
+        let mut label_configs: Vec<StoreConfig> = Vec::with_capacity(layers);
+    
+        let layer_size = graph.size() * NODE_SIZE;  //一层所包含的数据
+        println!("graph.size = {:?}  layer_size = {:?}",graph.size(), layer_size);
+            
+        //replaced by a storeconfig
+        //let mut exp_parents_data: Option<Vec<u8>> = None;
+        let mut parent_layer_store: Option<&DiskStore<H::Domain>> = None;
+           
+        //layer data split into chunks of N    
+        let layer_size_chunk = std::cmp::max(1024, layer_size/N);
+        assert_eq!(layer_size % N,0, "make sure 0 bytes left");
+            //chunk buffer
+        let mut layer_labels = vec![0u8; layer_size_chunk]; 
+    
+            // setup hasher to reuse
+        let mut base_hasher = Sha256::new();
+            // hash replica id
+        base_hasher.input(AsRef::<[u8]>::as_ref(replica_id));
+    
+        for layer in 1..=layers {
+            println!("generating labels(key) for layer: {:?}", layer);
+    
+            let layer_config =
+                StoreConfig::from_config(&config, CacheKey::label_layer(layer), Some(graph.size()));  
+                //no data written first      
+            let layer_store: DiskStore<H::Domain> = DiskStore::new_from_disk(
+                graph.size(),         
+                &layer_config.clone(),
+            )?;
+            println!("generated layer {:?} store with id {:?}",layer, layer_config.id);
+    
+            for node in 0..graph.size() {
+                create_key_ars(
+                    graph,
+                    base_hasher.clone(),
+                    parent_layer_store,//exp_parents_data.as_ref(),   -------replaced
+                    layer_store, //new added
+                    &mut layer_labels,
+                    node,
+                )?;
+                   //println!("layer_labels = {:?}", layer_labels);
+            }
+                //println!("layer_labels = {:?}", layer_labels);
+                //println!("setting exp parents");
+    
+                // NOTE: this means we currently keep 2x sector size around, to improve speed.
+                /*
+                if let Some(ref mut exp_parents_data) = exp_parents_data {
+                    exp_parents_data.copy_from_slice(&layer_labels);
+                } else {
+                    exp_parents_data = Some(layer_labels.clone());
+                }
+                */
+    
+            parent_layer_store = Some(&layer_store);
+    
+                // println!("exp_parents_data = {:?}", exp_parents_data);
+    
+                // Write the result to disk to avoid keeping it in memory all the time.
+                /*
+                let layer_config =
+                    StoreConfig::from_config(&config, CacheKey::label_layer(layer), Some(graph.size()));
+                println!("layer_config = {:?}", layer_config);
+                println!("  storing labels on disk");
+                // Construct and persist the layer data.
+                let layer_store: DiskStore<H::Domain> = DiskStore::new_from_slice_with_config(
+                    graph.size(),
+                    &layer_labels,
+                    layer_config.clone(),
+                )?;
+                println!(
+                    "  generated layer {:?} store with id {:?}",
+                    layer, layer_config.id
+                );
+                */
+    
+                // Track the layer specific store and StoreConfig for later retrieval.
+            labels.push(layer_store);
+            label_configs.push(layer_config);
+    
+            println!("labels = {:?}", labels);
+            println!("label_configs = {:?}", label_configs);
+        }
+    
+        assert_eq!(
+            labels.len(),
+            layers,
+            "Invalid amount of layers encoded expected"
+        );
+    
+        Ok((
+            LabelsCache::<H> {
+                labels,
+                _h: PhantomData,
+            },
+            Labels::<H> {
+                labels: label_configs,
+                _h: PhantomData,
+            },
+        ))
+    }
+
 
     fn build_tree<K: Hasher>(tree_data: &[u8], config: StoreConfig) -> Result<Tree<K>> {
         trace!("building tree (size: {})", tree_data.len());
@@ -530,13 +648,13 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
                 .zip(data.as_ref().par_chunks(NODE_SIZE))  //[u8: 32]
                 .map(|(key, data_node_bytes)| {
                     println!("key = {:?}",key);
-                    println!("data_node_bytes = {:?}",data_node_bytes);
+                    //println!("data_node_bytes = {:?}",data_node_bytes);
                     let data_node = H::Domain::try_from_bytes(data_node_bytes).unwrap();
-                    println!("data_node = {:?}",data_node);
+                    //println!("data_node = {:?}",data_node);
                     encode::<H::Domain>(key, data_node)
                 });
-            std::thread::sleep_ms(200);
-            println!("encoded_data = {:?}",encoded_data);
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            //println!("encoded_data = {:?}",encoded_data);
 
             MerkleTree::<_, H::Function>::from_par_iter_with_config(
                 encoded_data,
@@ -591,11 +709,10 @@ impl<'a, H: 'static + Hasher, G: 'static + Hasher> StackedDrg<'a, H, G> {
     ) -> Result<Labels<H>> {
         info!("replicate_phase1");
 
-        let (xxx, labels) = measure_op(EncodeWindowTimeAll, || {
+        let (_, labels) = measure_op(EncodeWindowTimeAll, || {
             Self::generate_labels(&pp.graph, &pp.layer_challenges, replica_id, config)
         })?;
-
-        println!("measure_op return = {:?}",xxx);
+      
 
         Ok(labels)
     }
@@ -682,6 +799,73 @@ pub fn create_key<H: Hasher>(
 
     Ok(())
 }
+
+
+
+//ars
+pub fn create_key_ars<H: Hasher>(
+    graph: &StackedBucketGraph<H>,
+    mut hasher: Sha256,
+    parent_layer_store: Option<&DiskStore<H::Domain>>,// exp_parents_data: Option<&Vec<u8>>,
+    layer_store: DiskStore<H::Domain>,//
+    layer_labels: &mut [u8],
+    node: usize,
+) -> Result<()> {
+        // hash parents for all non 0 nodes
+    if node > 0 {
+        let layer_labels = &*layer_labels;
+    
+        let mut inputs = vec![0u8; NODE_SIZE * TOTAL_PARENTS + 8];
+        let real_parents_count = if parent_layer_store.is_some() {
+            graph.degree()
+        } else {
+            graph.base_graph().degree()
+        };
+    
+        // hash node id
+        inputs[..8].copy_from_slice(&(node as u64).to_be_bytes());
+    
+        /*
+        graph.copy_parents_data(
+            node as u32,
+            layer_labels,
+            parent_layer_store,//exp_parents_data,
+            &mut inputs[8..],
+        );
+        */
+    
+        // Repeat parents
+        {
+            let (source, rest) = inputs.split_at_mut(NODE_SIZE * real_parents_count + 8);
+            let source = &source[8..];
+            debug_assert_eq!(source.len(), NODE_SIZE * real_parents_count);
+    
+            for chunk in rest.chunks_mut(source.len()) {
+                chunk.copy_from_slice(&source[..chunk.len()]);
+             }
+        }
+    
+        hasher.input(&inputs);
+    } else {
+         hasher.input(&(node as u64).to_be_bytes()[..]);
+    }
+    
+    // store the newly generated key
+    let start = data_at_node_offset(node) % N;//
+    let end = start + NODE_SIZE;
+    layer_labels[start..end].copy_from_slice(&hasher.result()[..]);
+    
+    // strip last two bits, to ensure result is in Fr.
+    layer_labels[end - 1] &= 0b0011_1111;
+    
+    if (end + 1 == layer_labels.len()){
+        layer_store.write_chunk(layer_labels);
+        layer_store.sync(); 
+    }
+
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {

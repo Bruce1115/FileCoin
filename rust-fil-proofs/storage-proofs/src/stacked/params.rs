@@ -542,7 +542,7 @@ impl<H: Hasher> Labels<H> {
             .map(|label| {
                 assert!(label.size.is_some());
                 let store = DiskStore::new_from_disk(label.size.unwrap(), &label)?;
-                store.read_at(node as usize)
+                store.read_at(node as usize)  //node = nodeindex   read_at是小块读取
             })
             .collect::<Result<_>>()?;
 

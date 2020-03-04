@@ -117,6 +117,9 @@ pub trait CompoundProof<
         multi_proof: &MultiProof<'b, E>,
         requirements: &S::Requirements,
     ) -> Result<bool> {
+
+        println!("compound_proofs verify start");
+
         ensure!(
             multi_proof.circuit_proofs.len() == Self::partition_count(public_params),
             "Inconsistent inputs"
@@ -124,6 +127,7 @@ pub trait CompoundProof<
 
         let vanilla_public_params = &public_params.vanilla_params;
         let pvk = groth16::prepare_batch_verifying_key(&multi_proof.verifying_key);
+        //println!("groth16::prepare_batch_verifying_key = {:?}",pvk);
 
         if !<S as ProofScheme>::satisfies_requirements(
             &public_params.vanilla_params,
@@ -138,8 +142,11 @@ pub trait CompoundProof<
             .map(|k| Self::generate_public_inputs(public_inputs, vanilla_public_params, Some(k)))
             .collect::<Result<_>>()?;
         let proofs: Vec<_> = multi_proof.circuit_proofs.iter().collect();
-
+        //println!("multi_proof.circuit_proofs = {:?}",proofs);
         let res = groth16::verify_proofs_batch(&pvk, &mut rand::rngs::OsRng, &proofs, &inputs)?;
+
+        println!("compound_proofs verify end with groth16::verify_proofs_batch  =  {}",res);
+
 
         Ok(res)
     }
@@ -217,16 +224,19 @@ pub trait CompoundProof<
         priority: bool,
     ) -> Result<Vec<groth16::Proof<E>>> {
         let mut rng = OsRng;
+        println!("circuit_proofs start");
 
         let circuits = vanilla_proof
             .into_par_iter()
             .map(|vanilla_proof| {
-                Self::circuit(
+               let c = Self::circuit(
                     &pub_in,
                     C::ComponentPrivateInputs::default(),
                     &vanilla_proof,
                     &pub_params,
-                )
+                );
+               // println!("c={:?}",c);
+                c
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -235,13 +245,16 @@ pub trait CompoundProof<
         } else {
             groth16::create_random_proof_batch(circuits, groth_params, &mut rng)?
         };
+       // println!("groth_proofs={:?}",groth_proofs);
 
         groth_proofs
             .into_iter()
             .map(|groth_proof| {
                 let mut proof_vec = vec![];
                 groth_proof.write(&mut proof_vec)?;
+                println!("proof_vec={:?}",proof_vec);
                 let gp = groth16::Proof::<E>::read(&proof_vec[..])?;
+               // println!("gp={:?}",gp);
                 Ok(gp)
             })
             .collect()

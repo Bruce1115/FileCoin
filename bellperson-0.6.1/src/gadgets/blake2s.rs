@@ -407,7 +407,6 @@ pub fn blake2s<E: ScalarEngine, CS: ConstraintSystem<E>>(
 
 #[cfg(test)]
 mod test {
-    
     use blake2s_simd::Params as Blake2sParams;
     use paired::bls12_381::Bls12;
     use rand_core::{RngCore, SeedableRng};
@@ -423,22 +422,6 @@ mod test {
         let mut cs = TestConstraintSystem::<Bls12>::new();
         let input_bits = vec![];
         let out = blake2s(&mut cs, &input_bits, b"12345678").unwrap();
- 
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        println!();println!();println!();
-        println!("cs = {:?}",cs);
-
-        /*
-        println!("cs.named_objects = {:?}",cs.named_objects);
-        println!("cs.current_namespace = {:?}",cs.current_namespace);
-        println!("cs.constraints = {:?}",cs.constraints);
-        println!("cs.inputs = {:?}",cs.inputs);
-        println!("cs.aux = {:?}",cs.aux);
-*/
-
-        println!("out = {:?}",out);
-
         assert!(cs.is_satisfied());
         assert_eq!(cs.num_constraints(), 0);
 
@@ -710,5 +693,4 @@ mod test {
             assert_eq!(expecteds[i], hash_result.as_bytes());
         }
     }
-    
 }

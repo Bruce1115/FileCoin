@@ -5,6 +5,7 @@ use anyhow::Context;
 use paired::Engine;
 use std::io::{self, Read, Write};
 
+#[derive(Clone,Debug)]
 pub struct MultiProof<'a, E: Engine> {
     pub circuit_proofs: Vec<groth16::Proof<E>>,
     pub verifying_key: &'a groth16::VerifyingKey<E>,

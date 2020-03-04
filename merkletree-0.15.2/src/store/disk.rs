@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::ops;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
+use std::io::Write;
 
 use anyhow::{Context, Result};
 use positioned_io::{ReadAt, WriteAt};
@@ -475,4 +476,10 @@ impl<E: Element> DiskStore<E> {
 
         Ok(())
     }
+
+    pub fn write_chunk(&mut self, slice: &[u8]) {
+        self.file.write(slice);
+        self.file.sync_all().context("failed to sync file");
+    }
+
 }

@@ -44,7 +44,6 @@ impl<E: Engine> Circuit<E> for DummyDemo<E> {
     }
 }
 
-/*
 #[cfg(feature = "gpu")]
 #[test]
 pub fn test_parallel_prover() {
@@ -102,4 +101,3 @@ pub fn test_parallel_prover() {
 
     lower_thread.join().unwrap();
 }
-*/

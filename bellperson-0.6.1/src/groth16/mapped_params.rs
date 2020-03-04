@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use super::{ParameterSource, VerifyingKey};
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct MappedParameters<E: Engine> {
     // The parameter file we're reading from.  This is stored so that
     // each (bulk) access can re-map the file, rather than trying to

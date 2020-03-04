@@ -26,6 +26,7 @@ use crate::types::{
 mod post;
 mod seal;
 pub(crate) mod util;
+pub mod arstests;
 
 pub use self::post::*;
 pub use self::seal::*;
@@ -468,6 +469,39 @@ mod tests {
     }
 
     #[test]
+    fn test_seal_lifecycle_part() -> Result<()> {      
+
+       println!();println!();println!();println!();
+       let sys_time = std::time::SystemTime::now();
+
+       let rng = &mut XorShiftRng::from_seed(crate::TEST_SEED);
+
+       let sector_size =  SECTOR_SIZE_ONE_KIB; //SECTOR_SIZE_16_MIB;//;
+
+       let number_of_bytes_in_piece =
+           UnpaddedBytesAmount::from(PaddedBytesAmount(sector_size.clone()));
+
+       println!("number_of_bytes_in_piece = {:?}   .0 ={:?}",number_of_bytes_in_piece,  number_of_bytes_in_piece.0);  
+       //生成1K的随机数据，放在U8的vec中
+       let piece_bytes: Vec<u8> = (0..number_of_bytes_in_piece.0)
+          // .map(|_| rand::random::<u8>())
+          .map(|x| x as u8 %200 )
+           .collect();
+
+       println!("piece_bytes = {:?}   length ={:?}",piece_bytes,  piece_bytes.len());        
+
+       //将随机数写入到文件中
+       let mut piece_file = NamedTempFile::new()?;
+       piece_file.write_all(&piece_bytes)?;
+       piece_file.as_file_mut().sync_all()?;
+       piece_file.as_file_mut().seek(SeekFrom::Start(0))?;
+
+       println!("write to piece_file = {:?}",piece_file); 
+
+       Ok(())
+    }
+
+    #[test]
      fn test_seal_lifecycle() -> Result<()> {
         //init_logger();
 
@@ -484,7 +518,8 @@ mod tests {
         println!("number_of_bytes_in_piece = {:?}   .0 ={:?}",number_of_bytes_in_piece,  number_of_bytes_in_piece.0);  
         //生成1K的随机数据，放在U8的vec中
         let piece_bytes: Vec<u8> = (0..number_of_bytes_in_piece.0)
-            .map(|_| rand::random::<u8>())
+            //.map(|_| rand::random::<u8>())
+            .map(|x| x as u8 %200 )
             .collect();
 
        // println!("piece_bytes = {:?}   length ={:?}",piece_bytes,  piece_bytes.len());        
@@ -576,7 +611,7 @@ mod tests {
        // println!("seal_commit_phase1_output = {:?}",phase1_output); 
         println!("Time Passed After seal_commit_phase1= {:?}", std::time::SystemTime::now().duration_since(sys_time));
         println!();println!();println!();
-/*
+
         let commit_output = seal_commit_phase2(config, phase1_output, prover_id, sector_id)?;
 
         println!("seal_commit_phase2_output = {:?}",commit_output); 
@@ -612,7 +647,6 @@ mod tests {
             "Computed and expected comm_d don't match."
         );
 
-       
         let verified = verify_seal(
             config,
             comm_r,
@@ -625,8 +659,8 @@ mod tests {
         )?;
         assert!(verified, "failed to verify valid seal");
         println!("verify_seal = {:?}",verified); 
+        
         println!("Time Passed After verify_seal= {:?}", std::time::SystemTime::now().duration_since(sys_time));
-*/
 
         Ok(())
     }

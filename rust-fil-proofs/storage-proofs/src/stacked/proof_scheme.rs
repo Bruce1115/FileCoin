@@ -90,8 +90,9 @@ impl<'a, 'c, H: 'static + Hasher, G: 'static + Hasher> ProofScheme<'a> for Stack
             return Ok(false);
         };
 
+        //proofs 是 proof的数组，此文件重新定义了proof
         let res = partition_proofs.par_iter().enumerate().all(|(k, proofs)| {
-            trace!(
+            println!(
                 "verifying partition proof {}/{}",
                 k + 1,
                 partition_proofs.len()

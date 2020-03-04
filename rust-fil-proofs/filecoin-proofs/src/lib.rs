@@ -1,6 +1,6 @@
 #![deny(clippy::all, clippy::perf, clippy::correctness)]
 
-mod api;
+pub mod api;
 mod caches;
 
 pub mod constants;

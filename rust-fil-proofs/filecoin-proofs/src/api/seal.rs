@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{ensure, Context, Result};
 use bincode::{deserialize, serialize};
-use log::{info, trace};
+use log::{info/*, trace*/};
 use memmap::MmapOptions;
 use merkletree::merkle::MerkleTree;
 use merkletree::store::{DiskStore, Store, StoreConfig};
@@ -426,7 +426,7 @@ pub fn seal_commit_phase1<T: AsRef<Path>>(
         &private_inputs,
         StackedCompound::partition_count(&compound_public_params),
     )?;
-   // println!("vanilla_proofs = {:?}",vanilla_proofs);
+    //println!("vanilla_proofs = {:?}",vanilla_proofs);
 
     println!("verify_all_partitions");
     let sanity_check = StackedDrg::verify_all_partitions(
@@ -462,6 +462,9 @@ pub fn seal_commit_phase2(
 ) -> Result<SealCommitOutput> {
     info!("seal_commit_phase2:start");
     println!("seal_commit_phase2:start");
+    let sys_time = std::time::SystemTime::now();
+
+
     let SealCommitPhase1Output {
         vanilla_proofs,
         comm_d,
@@ -474,8 +477,12 @@ pub fn seal_commit_phase2(
     ensure!(comm_d != [0; 32], "Invalid all zero commitment (comm_d)");
     ensure!(comm_r != [0; 32], "Invalid all zero commitment (comm_r)");
 
+    println!("comm_r = {:?}",comm_r);
     let comm_r_safe = as_safe_commitment(&comm_r, "comm_r")?;
+    println!("comm_r_safe = {:?}",comm_r_safe);
+    println!("comm_d = {:?}",comm_d);
     let comm_d_safe = <DefaultPieceHasher as Hasher>::Domain::try_from_bytes(&comm_d)?;
+    println!("comm_d_safe = {:?}",comm_d_safe);
     println!("PublicInputs:start");
     let public_inputs = stacked::PublicInputs {
         replica_id,
@@ -488,8 +495,8 @@ pub fn seal_commit_phase2(
     };
     println!("get_stacked_params:start");
     let groth_params = get_stacked_params(porep_config)?;
-
-    info!(
+    //println!("groth_params = {:?}",groth_params);  很长
+    println!(
         "got groth params ({}) while sealing",
         u64::from(PaddedBytesAmount::from(porep_config))
     );
@@ -502,6 +509,7 @@ pub fn seal_commit_phase2(
         partitions: Some(usize::from(PoRepProofPartitions::from(porep_config))),
         priority: false,
     };
+    println!("compound_setup_params = {:?}",compound_setup_params);
 
     let compound_public_params =
         <StackedCompound<DefaultTreeHasher, DefaultPieceHasher> as CompoundProof<
@@ -509,27 +517,31 @@ pub fn seal_commit_phase2(
             StackedDrg<DefaultTreeHasher, DefaultPieceHasher>,
             _,
         >>::setup(&compound_setup_params)?;
+    println!("compound_public_params setup= {:?}",compound_public_params);
 
-    info!("snark_proof:start");
-    println!("snark_proof:start");
+    println!("StackedCompound::circuit_proofs  :start");
+    println!("Time Passed = {:?}", std::time::SystemTime::now().duration_since(sys_time));
     let groth_proofs = StackedCompound::circuit_proofs(
         &public_inputs,
         vanilla_proofs,
         &compound_public_params.vanilla_params,
         &groth_params,
         compound_public_params.priority,
-    )?;
-    info!("snark_proof:finish");
-    println!("snark_proof:finish");
+    )?;   
+    println!("groth_proofs = {:?}",groth_proofs);
+    println!("StackedCompound::circuit_proofs  :finish");
+    println!("Time Passed = {:?}", std::time::SystemTime::now().duration_since(sys_time));
 
     let proof = MultiProof::new(groth_proofs, &groth_params.vk);
-
+    println!("MultiProof = {:?}",proof);
     let mut buf = Vec::with_capacity(
         SINGLE_PARTITION_PROOF_LEN * usize::from(PoRepProofPartitions::from(porep_config)),
     );
+    println!("SINGLE_PARTITION_PROOF_LEN ={} Size = {:?}",SINGLE_PARTITION_PROOF_LEN,usize::from(PoRepProofPartitions::from(porep_config)));
 
     proof.write(&mut buf)?;
-
+    println!("MultiProof buf = {:?}",buf);
+    println!("Time Passed = {:?}", std::time::SystemTime::now().duration_since(sys_time));
     // Verification is cheap when parameters are cached,
     // and it is never correct to return a proof which does not verify.
     verify_seal(
@@ -544,8 +556,8 @@ pub fn seal_commit_phase2(
     )
     .context("post-seal verification sanity check failed")?;
 
-    info!("seal_commit_phase2:end");
-
+    println!("seal_commit_phase2:end");
+    println!("Time Passed = {:?}", std::time::SystemTime::now().duration_since(sys_time));
     Ok(SealCommitOutput { proof: buf })
 }
 
@@ -582,6 +594,9 @@ pub fn verify_seal(
     seed: Ticket,
     proof_vec: &[u8],
 ) -> Result<bool> {
+
+    println!("seal verify_seal start");
+
     ensure!(comm_d_in != [0; 32], "Invalid all zero commitment (comm_d)");
     ensure!(comm_r_in != [0; 32], "Invalid all zero commitment (comm_r)");
 
@@ -617,17 +632,23 @@ pub fn verify_seal(
     };
 
     let verifying_key = get_stacked_verifying_key(porep_config)?;
+    println!("verifying_key = {:?}",verifying_key);
 
-    info!(
+    println!(
         "got verifying key ({}) while verifying seal",
         u64::from(sector_bytes)
     );
 
+    let partitioncount = usize::from(PoRepProofPartitions::from(porep_config));
+    println!("partitioncount = {:?}",partitioncount);
     let proof = MultiProof::new_from_reader(
-        Some(usize::from(PoRepProofPartitions::from(porep_config))),
+        Some(partitioncount),
         proof_vec,
         &verifying_key,
     )?;
+
+    println!("StackedCompound::verify");
+
 
     StackedCompound::verify(
         &compound_public_params,

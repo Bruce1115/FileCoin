@@ -411,7 +411,6 @@ impl<E: ScalarEngine> Num<E> {
 
 #[cfg(test)]
 mod test {
-    /*
     use crate::ConstraintSystem;
     use ff::{BitIterator, Field, PrimeField};
     use paired::bls12_381::{Bls12, Fr};
@@ -587,5 +586,4 @@ mod test {
             }
         }
     }
-    */
 }

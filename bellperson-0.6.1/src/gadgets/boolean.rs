@@ -8,7 +8,7 @@ use super::Assignment;
 
 /// Represents a variable in the constraint system which is guaranteed
 /// to be either zero or one.
-#[derive(Clone,Debug)]
+#[derive(Clone)]
 pub struct AllocatedBit {
     variable: Variable,
     value: Option<bool>,
@@ -348,7 +348,7 @@ pub fn field_into_allocated_bits_le<E: ScalarEngine, CS: ConstraintSystem<E>, F:
 
 /// This is a boolean value which may be either a constant or
 /// an interpretation of an `AllocatedBit`.
-#[derive(Clone,Debug)]
+#[derive(Clone)]
 pub enum Boolean {
     /// Existential view of the boolean variable
     Is(AllocatedBit),
@@ -734,7 +734,6 @@ impl From<AllocatedBit> for Boolean {
 
 #[cfg(test)]
 mod test {
-    /*
     use super::{field_into_allocated_bits_le, u64_into_boolean_vec_le, AllocatedBit, Boolean};
     use crate::gadgets::test::*;
     use crate::ConstraintSystem;
@@ -1810,5 +1809,4 @@ mod test {
             assert!(cs.is_satisfied());
         }
     }
-    */
 }

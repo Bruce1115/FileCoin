@@ -21,18 +21,17 @@ enum NamedObject {
 }
 
 /// Constraint system for testing purposes.
-#[derive(Debug)]
 pub struct TestConstraintSystem<E: ScalarEngine> {
-     named_objects: HashMap<String, NamedObject>,
-     current_namespace: Vec<String>,
-     constraints: Vec<(
+    named_objects: HashMap<String, NamedObject>,
+    current_namespace: Vec<String>,
+    constraints: Vec<(
         LinearCombination<E>,
         LinearCombination<E>,
         LinearCombination<E>,
         String,
     )>,
-     inputs: Vec<(E::Fr, String)>,
-     aux: Vec<(E::Fr, String)>,
+    inputs: Vec<(E::Fr, String)>,
+    aux: Vec<(E::Fr, String)>,
 }
 
 #[derive(Clone, Copy)]
@@ -422,7 +421,6 @@ impl<E: ScalarEngine> ConstraintSystem<E> for TestConstraintSystem<E> {
 fn test_cs() {
     use ff::PrimeField;
     use paired::bls12_381::{Bls12, Fr};
-  
 
     let mut cs = TestConstraintSystem::<Bls12>::new();
     assert!(cs.is_satisfied());
@@ -464,5 +462,3 @@ fn test_cs() {
 
     assert!(cs.get("test1/test2/hehe") == Fr::one());
 }
-
-

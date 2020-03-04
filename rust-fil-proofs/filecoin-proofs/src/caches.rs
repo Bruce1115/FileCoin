@@ -62,7 +62,7 @@ where
         let cache = &mut (*cache_ref).lock().unwrap();
         cache.insert(identifier, new_entry);
     }
-    println!("before cache_lookup return");
+    println!("cache_lookup return");
     Ok(res)
 }
 

@@ -147,7 +147,7 @@ impl<'a, E: Engine> Circuit<E> for MiMCDemo<'a, E> {
         Ok(())
     }
 }
-/*
+
 #[test]
 fn test_mimc() {
     // This may not be cryptographically safe, use
@@ -191,9 +191,6 @@ fn test_mimc() {
     for _ in 0..SAMPLES {
         // Generate a random preimage and compute the image
         let xl = <Bls12 as ScalarEngine>::Fr::random(rng);
-
-        println!("xl=  {:?}",xl);
-
         let xr = <Bls12 as ScalarEngine>::Fr::random(rng);
         let image = mimc::<Bls12>(xl, xr, &constants);
 
@@ -301,4 +298,3 @@ fn test_mimc() {
         );
     }
 }
-*/

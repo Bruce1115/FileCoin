@@ -107,7 +107,7 @@ impl<E: Engine> Proof<E> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct VerifyingKey<E: Engine> {
     // alpha in g1 for verifying and for creating A/C elements of
     // proof. Never the point at infinity.
@@ -311,7 +311,7 @@ impl<E: Engine> VerifyingKey<E> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Parameters<E: Engine> {
     pub vk: VerifyingKey<E>,
 
@@ -760,7 +760,6 @@ impl<'a, E: Engine> ParameterSource<E> for &'a Parameters<E> {
 
 #[cfg(test)]
 mod test_with_bls12_381 {
-    /*
     use super::*;
     use crate::{Circuit, ConstraintSystem, SynthesisError};
 
@@ -848,5 +847,4 @@ mod test_with_bls12_381 {
             assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
         }
     }
-    */
 }

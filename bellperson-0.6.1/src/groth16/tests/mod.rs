@@ -89,7 +89,7 @@ impl<E: Engine> Circuit<E> for XORDemo<E> {
         Ok(())
     }
 }
-/*
+
 #[test]
 fn test_xordemo() {
     let g1 = Fr::one();
@@ -109,6 +109,7 @@ fn test_xordemo() {
 
         generate_parameters(c, g1, g2, alpha, beta, gamma, delta, tau).unwrap()
     };
+    println!("params = {:?}", params);
 
     // This will synthesize the constraint system:
     //
@@ -126,6 +127,7 @@ fn test_xordemo() {
     assert_eq!(7, params.h.len());
 
     let mut root_of_unity = Fr::root_of_unity();
+    println!("root_of_unity = {:?}", root_of_unity);
 
     // We expect this to be a 2^10 root of unity
     assert_eq!(Fr::one(), root_of_unity.pow(&[1 << 10]));
@@ -382,12 +384,9 @@ fn test_xordemo() {
     assert!(verify_proof(&pvk, &proof, &[Fr::one()]).unwrap());
 }
 
-*/
 #[test]
 fn test_create_batch_single() {
     // test consistency between single and batch creation
-    println!();
-    println!("-------------------------");
     let g1 = Fr::one();
     let g2 = Fr::one();
     let alpha = Fr::from_str("48577").unwrap();
@@ -439,4 +438,3 @@ fn test_create_batch_single() {
         assert!(verify_proof(&pvk, &proof, &[Fr::one()]).unwrap());
     }
 }
-

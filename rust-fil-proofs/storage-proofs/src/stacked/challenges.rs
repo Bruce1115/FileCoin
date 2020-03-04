@@ -47,6 +47,9 @@ impl LayerChallenges {
     ) -> Vec<usize> {
         assert!(leaves > 2, "Too few leaves: {}", leaves);
 
+        let challenges:Vec<usize> =  (1..3).map(|i| i + k as usize).collect();
+        challenges
+        /*
         (0..challenges_count)
             .map(|i| {
                 let j: u32 = ((challenges_count * k as usize) + i) as u32;
@@ -68,6 +71,8 @@ impl LayerChallenges {
                 big_mod_challenge + 1
             })
             .collect()
+
+            */
     }
 }
 

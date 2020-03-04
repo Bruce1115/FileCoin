@@ -384,7 +384,6 @@ impl UInt32 {
 
 #[cfg(test)]
 mod test {
-    /*
     use super::UInt32;
     use crate::gadgets::boolean::Boolean;
     use crate::gadgets::multieq::MultiEq;
@@ -753,5 +752,4 @@ mod test {
             }
         }
     }
-    */
 }

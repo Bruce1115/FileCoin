@@ -15,7 +15,7 @@ bench = false
 bitvec = "0.5"
 rand = "0.7"
 libc = "0.2"
-merkletree = "0.15.2"
+merkletree = {path = "/home/bruce/rustwork/merkletree-0.15.2"}
 byteorder = "1"
 config = "0.9.3"
 crossbeam-utils = "0.6"
@@ -40,9 +40,9 @@ blake2b_simd = "0.5"
 blake2s_simd = "0.5"
 toml = "0.5"
 ff = { version = "0.2.1", package = "fff" }
-bellperson = "0.6.0"
+bellperson = {path = "/home/bruce/rustwork/bellperson-0.6.0"}
 paired = { version = "0.17.0", features = ["serde"] }
-fil-sapling-crypto = "0.4.0"
+fil-sapling-crypto = {path = "/home/bruce/rustwork/fil-sapling-crypto-0.4.0"}
 serde_json = "1.0"
 log = "0.4.7"
 pretty_assertions = "0.6.1"
@@ -55,7 +55,7 @@ generic-array = "0.13.2"
 anyhow = "1.0.23"
 thiserror = "1.0.6"
 cpu-time = "1.0.0"
-neptune = "0.4.0"
+neptune = {path = "/home/bruce/rustwork/neptune-0.4.0"}
 typenum = "1.11.2"
 
 

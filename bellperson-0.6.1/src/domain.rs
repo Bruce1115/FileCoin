@@ -22,7 +22,6 @@ use crate::gpu;
 
 use log::{info, warn};
 
-#[derive(Debug)]
 pub struct EvaluationDomain<E: ScalarEngine, G: Group<E>> {
     coeffs: Vec<G>,
     exp: u32,
@@ -225,7 +224,7 @@ pub trait Group<E: ScalarEngine>: Sized + Copy + Clone + Send + Sync {
     fn group_add_assign(&mut self, other: &Self);
     fn group_sub_assign(&mut self, other: &Self);
 }
-#[derive(Debug)]
+
 pub struct Point<G: CurveProjective>(pub G);
 
 impl<G: CurveProjective> PartialEq for Point<G> {
@@ -257,22 +256,11 @@ impl<G: CurveProjective> Group<G::Engine> for Point<G> {
     }
 }
 
-#[derive(Debug)]
 pub struct Scalar<E: ScalarEngine>(pub E::Fr);
 
 impl<E: ScalarEngine> PartialEq for Scalar<E> {
     fn eq(&self, other: &Scalar<E>) -> bool {
         self.0 == other.0
-    }
-}
-
-impl <E: ScalarEngine> fmt::Display for Scalar<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match *self {
-            PrimeFieldDecodingError::NotInField(ref repr) => {
-                write!(f, "{} is not an element of the field", repr)
-            }
-        }
     }
 }
 
@@ -500,7 +488,7 @@ fn polynomial_arith() {
     test_mul::<Bls12, _>(rng);
 }
 
-//#[cfg(feature = "pairing")]
+#[cfg(feature = "pairing")]
 #[test]
 fn fft_composition() {
     use paired::bls12_381::Bls12;
@@ -509,28 +497,15 @@ fn fft_composition() {
     fn test_comp<E: ScalarEngine, R: RngCore>(rng: &mut R) {
         let worker = Worker::new();
 
-        println!();println!();println!();println!();println!();
-        println!("-------------------");
-
-        for coeffs in 0..1 {
+        for coeffs in 0..10 {
             let coeffs = 1 << coeffs;
 
             let mut v = vec![];
             for _ in 0..coeffs {
-                v.push(Scalar::<E>(E::Fr::random(rng)));              
+                v.push(Scalar::<E>(E::Fr::random(rng)));
             }
-            println!("{:?}",v.len());
 
-            for coeff in v {
-                println!("coeff = {:?}",coeff.0);
-            }
-            println!("{:?}",v);
-           
-           // let mut domain = EvaluationDomain::from_coeffs(v.clone()).unwrap();
-           //let mut domain = EvaluationDomain::from_coeffs(v).unwrap();
-
-           // println!("domain = {:?}",domain);
-            /*
+            let mut domain = EvaluationDomain::from_coeffs(v.clone()).unwrap();
             domain.ifft(&worker, &mut None);
             domain.fft(&worker, &mut None);
             assert!(v == domain.coeffs);
@@ -543,7 +518,6 @@ fn fft_composition() {
             domain.coset_fft(&worker, &mut None);
             domain.icoset_fft(&worker, &mut None);
             assert!(v == domain.coeffs);
-            */
         }
     }
 
@@ -612,7 +586,7 @@ pub fn gpu_fft_consistency() {
 
     let worker = Worker::new();
     let log_cpus = worker.log_num_cpus();
-   // let mut kern = gpu::FFTKernel::create(1 << 24).expect("Cannot initialize kernel!");
+    let mut kern = gpu::FFTKernel::create(1 << 24).expect("Cannot initialize kernel!");
 
     for log_d in 1..25 {
         let d = 1 << log_d;

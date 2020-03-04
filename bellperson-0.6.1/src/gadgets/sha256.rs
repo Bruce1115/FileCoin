@@ -270,7 +270,6 @@ where
 
 #[cfg(test)]
 mod test {
-    /*
     use super::*;
     use crate::gadgets::boolean::AllocatedBit;
     use crate::gadgets::test::TestConstraintSystem;
@@ -386,5 +385,4 @@ mod test {
             }
         }
     }
-    */
 }
